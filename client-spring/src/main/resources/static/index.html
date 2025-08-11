@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+	<script src="./jquery-3.7.1.min.js"></script>
+	<script>
+		$(function() {
+			
+			$("#getTicker").on("click", function() {
+				const code = $("#code").val();
+				$.get("/api/getTicker", { code }, function(response) {
+					$("#result").text(JSON.stringify(response));
+				})
+			})
+			
+			let eventSource;
+			$("#openStream").on("click", function() {
+				$("#streamResult").empty();
+				const code = $("#code").val();
+				
+				eventSource = new EventSource("/api/subscribe?code="+code);
+				
+				eventSource.onmessage = (msg) => {
+					const msgJson = JSON.parse(msg.data);
+					if (msgJson.code !== code) return;
+					
+					const message = JSON.stringify(msgJson);
+					const $msg = $("<p></p>").text(message)
+					$("#streamResult").append($msg)
+				}
+
+				eventSource.onerror = (err) => {
+					console.log('error');
+					eventSource.close();
+				}
+			})
+			$("#closeStream").on("click", function() {
+				if (eventSource) {
+					eventSource.close();
+				}
+			})
+		})
+	</script>
+</head>
+<body>
+    <div>gRPC 호출 테스트</div>
+	<div style="display: flex; margin-top: 12px; gap: 10px;">
+		<span>종목 선택</span>
+		<select id="code">
+			<option value="KRW-BTC">KRW-BTC</option>
+			<option value="KRW-ETH">KRW-ETH</option>
+			<option value="KRW-DOGE">KRW-DOGE</option>
+		</select>
+	</div>
+	<div>
+		<h3>unary</h3>
+		<button id="getTicker">api 호출</button>
+		<div id="result"></div>
+	</div>
+	
+	<div>
+		<h3>streaming</h3>
+		<div style="display: flex;">
+			<button id="openStream">SSE 열기</button>
+			<button id="closeStream">SSE 닫기</button>
+		</div>
+		<div id="streamResult"></div>		
+	</div>
+	
+</body>
+</html>
