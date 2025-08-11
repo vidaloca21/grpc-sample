@@ -39,6 +39,10 @@ npx protoc --js_out=import_style=commonjs,binary:./src/generated --grpc-web_out=
 
 4. 화면 - gRPC 테스트
 
+## gradle build 실행
+../gradlew installDist ( << 이거 맞나? 아리까리함 )
+java -jar ./build/libs/grpc-server-1.0-SNAPSHOT.jar
+
 
 ##### 25.08.08
 01. upbit와 통신하는 gRPC 서버 - java gradle project
