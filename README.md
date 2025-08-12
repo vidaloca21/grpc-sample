@@ -26,13 +26,14 @@ D // server application > upbit
 이제 해야되는거 순서대로 프로세스 >>>>>> 
 
 1. envoy 프록시 설정해서 docker 이미지로 띄우기
+```powershell
 cd D:\dev_workspace\ci-workspace\grpc\config
 docker compose up -d envoy-grpcweb
-
-2. envoy - 10010 (gRPC 서버) 연결 및 환경 설정 >> 여기까지 확인 완
+```
+3. envoy - 10010 (gRPC 서버) 연결 및 환경 설정 >> 여기까지 확인 완
 grpcurl -plaintext -import-path "D:\dev_workspace\ci-workspace\grpc\grpc-server\src\main\proto\upbit" -proto "ticker.proto" -d "{\"market\":\"KRW-DOGE\"}" localhost:8099 TickerService/getTicker
 
-3. vite - react 프로젝트 구성
+4. vite - react 프로젝트 구성
 >> proto 컴파일하고, 그거로 api 만들고, 호출부 작업하면 됨
 >> 의존성 설치 
 npm i grpc-web google-protobuf @types/google-protobuf
