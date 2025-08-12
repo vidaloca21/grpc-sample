@@ -3,6 +3,15 @@ B // client gRPC 서버
 C // client application > react
 D // server application > upbit
 
+#### 25.08.12
+    "google-protobuf": "^3.21.4",
+    "grpc-web": "^1.5.0",
+    "protoc": "^1.1.3",
+    "protoc-gen-grpc-web": "^1.5.0",
+
+>> cjs 이슈로 인해 proto/lib package를 node_modules에 추가 후 import
+
+
 #### 25.08.11
 >>>> 지금까지 뭐 했냐면
 1. protoc 설치함 (zip 파일 환경변수 등록)
