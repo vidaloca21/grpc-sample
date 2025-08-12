@@ -1,0 +1,11 @@
+{
+    "name": "@proto/generated",
+    "version": "0.0.1",
+    "type": "commonjs",
+    "main": "index.cjs",
+    "files": [
+        "index.cjs",
+        "ticker_pb.js",
+        "ticker_grpc_web_pb.js"
+    ]
+}
