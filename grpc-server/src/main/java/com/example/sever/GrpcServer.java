@@ -25,7 +25,7 @@ public class GrpcServer {
 
     public void start() throws IOException {
         server.start();
-        System.out.println("*** server started ***");
+        System.out.println("*** GrpcServer started ***");
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
@@ -35,7 +35,7 @@ public class GrpcServer {
                 } catch (InterruptedException e) {
                     e.printStackTrace(System.err);
                 }
-                System.err.println("*** server shut down ***");
+                System.err.println("*** GrpcServer shut down ***");
             }
         });
     }

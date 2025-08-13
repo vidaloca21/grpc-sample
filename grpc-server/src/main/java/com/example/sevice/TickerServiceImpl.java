@@ -4,11 +4,16 @@ import com.example.service.*;
 import com.example.upbit.UpbitTickerGetter;
 import com.example.upbit.UpbitWebsocketListener;
 import com.google.gson.Gson;
+import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.WebSocket;
 
 public class TickerServiceImpl extends TickerServiceGrpc.TickerServiceImplBase {
+
+    // OkHttpClient는 재사용(커넥션 풀 포함)
+    private static final OkHttpClient WS_CLIENT = new OkHttpClient();
 
     @Override
     public void getTicker(TickerRequest request, StreamObserver<TickerResponse> responseObserver) {
@@ -57,15 +62,33 @@ public class TickerServiceImpl extends TickerServiceGrpc.TickerServiceImplBase {
         String code = request.getCode();
         String type = request.getType();
 
-        OkHttpClient client = new OkHttpClient();
+        // gRPC 서버측 스트림 옵저버 (취소/완료 훅 등록 가능)
+        ServerCallStreamObserver<StreamResponse> serverObs =
+                (ServerCallStreamObserver<StreamResponse>) responseObserver;
 
+        // Websocket Listener 생성
+        UpbitWebsocketListener listener = new UpbitWebsocketListener(code, type, responseObserver);
+
+        // Websocket 연결
         Request wsRequest = new Request.Builder()
                 .url("wss://api.upbit.com/websocket/v1")
                 .build();
+        WebSocket ws = WS_CLIENT.newWebSocket(wsRequest, listener);
 
-        UpbitWebsocketListener webSocketListener = new UpbitWebsocketListener(code, type, responseObserver);
-        client.newWebSocket(wsRequest, webSocketListener);
-        client.dispatcher().executorService().shutdown();
+        // gRPC 클라이언트가 스트림을 취소(브라우저 탭 닫힘 등)하면 WS도 종료
+        serverObs.setOnCancelHandler(() -> {
+            listener.close("gRPC client canceled");
+        });
+
+        // gRPC 스트림이 정상 완료될 때도 WS 종료
+        try {
+            serverObs.setOnCloseHandler(() -> listener.close("gRPC stream completed"));
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+//        UpbitWebsocketListener webSocketListener = new UpbitWebsocketListener(code, type, responseObserver);
+//        client.newWebSocket(wsRequest, webSocketListener);
+//        client.dispatcher().executorService().shutdown();
     }
 
 
