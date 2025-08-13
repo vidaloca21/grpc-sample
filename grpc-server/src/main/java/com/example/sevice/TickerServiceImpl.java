@@ -14,6 +14,7 @@ public class TickerServiceImpl extends TickerServiceGrpc.TickerServiceImplBase {
 
     // OkHttpClient는 재사용(커넥션 풀 포함)
     private static final OkHttpClient WS_CLIENT = new OkHttpClient();
+    private static final String WS_URL = "wss://api.upbit.com/websocket/v1";
 
     @Override
     public void getTicker(TickerRequest request, StreamObserver<TickerResponse> responseObserver) {
@@ -70,9 +71,7 @@ public class TickerServiceImpl extends TickerServiceGrpc.TickerServiceImplBase {
         UpbitWebsocketListener listener = new UpbitWebsocketListener(code, type, responseObserver);
 
         // Websocket 연결
-        Request wsRequest = new Request.Builder()
-                .url("wss://api.upbit.com/websocket/v1")
-                .build();
+        Request wsRequest = new Request.Builder().url(WS_URL).build();
         WebSocket ws = WS_CLIENT.newWebSocket(wsRequest, listener);
 
         // gRPC 클라이언트가 스트림을 취소(브라우저 탭 닫힘 등)하면 WS도 종료

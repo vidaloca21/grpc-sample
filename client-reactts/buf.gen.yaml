@@ -1,6 +1,14 @@
 version: v2
 plugins:
+    # 메시지/서비스(GenService) 생성
     - local: protoc-gen-es
+      out: src/proto/gen
+      opt:
+          - target=ts
+          - import_extension=ts
+
+    # react-query용 엔드포인트 함수 생성
+    - remote: buf.build/connectrpc/query-es:v2.1.1
       out: src/proto/gen
       opt:
           - target=ts

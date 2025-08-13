@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { tickerClient } from './config/ticker-client'
 
-export function useTicker(market: string) {
+export function useGetTicker(market: string) {
     return useQuery({
         queryKey: ['ticker', market],
         queryFn: async () => {

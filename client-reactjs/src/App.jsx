@@ -15,9 +15,10 @@ export default function App() {
     }
     useEffect(() => {
         if (!running) return
+        setMessages([])
         const stop = startTickerStream({
             type: 'ticker',
-            code: 'KRW-DOGE',
+            code: marketInput,
             onData: obj => setMessages(prev => [...prev, obj?.message ?? JSON.stringify(obj)]),
             onError: e => {
                 console.error('stream error:', e)
