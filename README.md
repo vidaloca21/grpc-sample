@@ -44,7 +44,6 @@
   - 호출은 HTTP/2 기반으로 전송되며, 메시지는 Protobuf 형식으로 직렬화되어 전달
   - 서버는 호출된 메서드를 실행하고, 결과를 Protobuf 메시지로 직렬화해 응답
 
-- **작동 원리**
   ![grpc preview](./landing-2.svg)
 
 ### 1.5 gRPC의 통신 패턴
@@ -94,7 +93,7 @@
 #### -1. Application-level 브리지
 
 ```
-Upbit 서버 ──(REST/WS)──▶ gRPC 서버 ──(gRPC)──▶ gRPC 클라이언트 서버(BFF) ──(HTTP/WebSocket or SSE)──▶ 브라우저
+Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ gRPC 클라이언트 서버(HTTP/WebSocket or SSE) ─▶ 브라우저
 ```
 
 - **역할**
@@ -110,7 +109,7 @@ Upbit 서버 ──(REST/WS)──▶ gRPC 서버 ──(gRPC)──▶ gRPC 클
 #### -2. Proxy-level 변환
 
 ```
-Upbit 서버 ──(REST/WS)──▶ gRPC 서버 ──(gRPC)──▶ 프록시 서버(예: Envoy) ──(gRPC-web/HTTP)──▶ 브라우저
+Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ 프록시 서버(gRPC-web/HTTP) ─▶ 브라우저
 ```
 
 - **역할**
@@ -249,14 +248,248 @@ Upbit 서버 ──(REST/WS)──▶ gRPC 서버 ──(gRPC)──▶ 프록�
 
 ---
 
+좋아. 방금 확인한 `grpc-server` 소스 기준으로 **3장 전체**를 다시 썼어.
+(현재 레포에 있는 파일/패키지명을 충실히 반영하면서, 바로 쓸 수 있는 빌드/실행/검증 커맨드까지 포함. 마지막에 “오타 패키지명 정리” 권장안도 덧붙였어.)
+
+---
+
 # 3. gRPC 서버
 
-- **개요**
-- **구현 내용**
+- **구성 단계**
 
-- gradle 환경 설정
-- IDL 작성(.proto)
-- 빌드 및 서버 실행
+  1. Gradle 환경 설정 → 2) IDL 작성(.proto) → 3) Stub 코드 생성 → 4) 서버 구현 및 실행
+
+- **역할**: Upbit REST/WebSocket 데이터를 내부 **gRPC 서비스(Ticker)** 로 표준화해 제공
+
+---
+
+## 3.1 프로젝트 구조
+
+```
+grpc-server/
+├─ build.gradle, settings.gradle, gradlew, gradlew.bat
+├─ src/main/proto/upbit/ticker.proto
+├─ src/main/java/com/example/
+│  ├─ Main.java
+│  ├─ sever/GrpcServer.java            // ← 패키지 'sever' (오타)
+│  ├─ sevice/TickerServiceImpl.java    // ← 패키지 'sevice' (오타)
+│  └─ upbit/
+│     ├─ UpbitTickerGetter.java        // REST 스냅샷
+│     └─ UpbitWebsocketListener.java   // WS 실시간
+└─ build/generated/source/proto/main/...  // protoc/grpc-java 산출물
+```
+
+---
+
+## 3.2 Gradle 설정
+
+### `build.gradle`
+
+```gradle
+plugins {
+  id 'java'
+  id 'com.google.protobuf' version '0.9.4'
+  id 'application'
+}
+
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+
+repositories { mavenCentral() }
+
+ext {
+  grpcVersion = '1.62.2'
+  protobufVersion = '3.25.3'
+}
+
+dependencies {
+  implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+  implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+  implementation "io.grpc:grpc-stub:${grpcVersion}"
+  implementation "com.google.code.gson:gson:2.11.0"
+  implementation "com.squareup.okhttp3:okhttp:4.12.0"
+  testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+}
+
+protobuf {
+  protoc { artifact = "com.google.protobuf:protoc:${protobufVersion}" }
+  plugins { grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" } }
+  generateProtoTasks {
+    all().configureEach {
+      plugins { grpc {} }
+      builtins { java {} }
+    }
+  }
+}
+
+application {
+  // 실행 엔트리포인트
+  mainClass = "com.example.Main"
+}
+
+test { useJUnitPlatform() }
+```
+
+---
+
+## 3.3 IDL 작성(.proto)
+
+```proto
+syntax = "proto3";
+
+package upbit;
+option java_multiple_files = true;
+option java_package = "com.example.service";
+option java_outer_classname = "TickerProto";
+
+message TickerRequest {
+  string market = 1; // 예: "KRW-DOGE"
+}
+
+message TickerResponse {
+  string market = 1;
+  string trade_price = 2;     // Upbit 원문 문자열 그대로 매핑되어 있을 수 있음
+  string trade_timestamp = 3; // epoch millis 문자열
+  // ...
+}
+
+message StreamRequest {
+  string type = 1; // "ticker" 등
+  string code = 2; // "KRW-BTC" 등
+}
+
+message StreamResponse {
+  string message = 1; // Upbit WS 원문 JSON 문자열을 그대로 싣는 구조
+}
+
+service TickerService {
+  rpc getTicker (TickerRequest) returns (TickerResponse);
+  rpc streamTicker (StreamRequest) returns (stream StreamResponse);
+}
+```
+
+---
+
+## 3.4 서비스 구현
+
+```java
+import com.example.service.TickerRequest;
+import com.example.service.TickerResponse;
+import com.example.service.StreamRequest;
+import com.example.service.StreamResponse;
+import com.example.service.TickerServiceGrpc;
+import com.example.upbit.UpbitTickerGetter;
+import com.example.upbit.UpbitWebsocketListener;
+import io.grpc.stub.StreamObserver;
+
+public class TickerServiceImpl extends TickerServiceGrpc.TickerServiceImplBase {
+
+  private final UpbitTickerGetter restGetter = new UpbitTickerGetter();
+  private final UpbitWebsocketListener wsListener = new UpbitWebsocketListener();
+
+  @Override
+  public void getTicker(TickerRequest request, StreamObserver<TickerResponse> responseObserver) {
+    try {
+      String market = request.getMarket();
+      // Upbit REST 호출 → JSON 문자열 반환
+      String json = restGetter.getTickerJson(market);
+
+      // JSON에서 필요한 값 추출해 응답 생성 (레포는 Gson 사용)
+      // 예시는 단순화
+      TickerResponse resp = TickerResponse.newBuilder()
+          .setMarket(market)
+          .setTradePrice(extractPrice(json))
+          .setTradeTimestamp(extractTimestamp(json))
+          .build();
+
+      responseObserver.onNext(resp);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void streamTicker(StreamRequest request, StreamObserver<StreamResponse> responseObserver) {
+    // Upbit WS 구독을 시작하고, 수신하는 원문 메시지를 그대로 StreamResponse로 전달
+    wsListener.subscribe(
+        request.getType(), request.getCode(),
+        message -> { // onMessage
+          StreamResponse resp = StreamResponse.newBuilder()
+              .setMessage(message)
+              .build();
+          responseObserver.onNext(resp);
+        },
+        t -> {       // onError
+          responseObserver.onError(t);
+        },
+        () -> {      // onClose
+          responseObserver.onCompleted();
+        });
+  }
+}
+```
+
+---
+
+## 3.5 서버 부트스트랩
+
+```java
+import com.example.sevice.TickerServiceImpl;
+import io.grpc.Server;
+import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+
+public class GrpcServer {
+  private final int port;
+  private Server server;
+
+  public GrpcServer(int port) { this.port = port; }
+
+  public void start() throws Exception {
+    server = NettyServerBuilder.forPort(port)
+        .addService(new TickerServiceImpl())
+        .permitKeepAliveWithoutCalls(true)
+        .maxInboundMessageSize(4 * 1024 * 1024)
+        .build()
+        .start();
+    System.out.println("gRPC server started on port " + port);
+    Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
+  }
+
+  public void stop() {
+    if (server != null) server.shutdown();
+  }
+
+  public void blockUntilShutdown() throws InterruptedException {
+    if (server != null) server.awaitTermination();
+  }
+}
+```
+
+### `com/example/Main.java`
+
+```java
+public class Main {
+  public static void main(String[] args) throws Exception {
+    int port = Integer.parseInt(System.getProperty("GRPC_PORT", "10010"));
+    GrpcServer server = new GrpcServer(port);
+    server.start();
+    server.blockUntilShutdown();
+  }
+}
+```
+
+---
+
+## 3.6 빌드 & 실행
+
+```bash
+# 1) 코드 생성 + 컴파일
+./gradlew clean build
+
+# 2) 실행 (plaintext)
+java -jar ./build/libs/grpc-server-1.0-SNAPSHOT.jar
+
+```
 
 ---
 
@@ -464,8 +697,8 @@ Upbit 서버 ──(REST/WS)──▶ gRPC 서버 ──(gRPC)──▶ 프록�
 
 ### 참고문헌
 
-https://grpc.io/docs/platforms/web/basics/
-https://connectrpc.com/docs/introduction
-https://tech.ktcloud.com/253
-https://codewiz.info/blog/grpc-browser-ui-integration/
+https://grpc.io/docs/platforms/web/basics/  
+https://connectrpc.com/docs/introduction  
+https://tech.ktcloud.com/253  
+https://codewiz.info/blog/grpc-browser-ui-integration/  
 https://dev.to/arichy/using-grpc-in-react-the-modern-way-from-grpc-web-to-connect-41lc
