@@ -9,8 +9,6 @@
   - 분산 환경에서 함수 호출을 추상화하여 개발자가 네트워크 세부 구현을 신경 쓰지 않아도 됨.
   - 주로 클라이언트–서버 구조에서 사용.
 
----
-
 ## 1.2 Protocol Buffers (Protobuf)
 
 - **정의**
@@ -23,8 +21,6 @@
   - **자동 코드 생성**: `protoc` 컴파일러를 통해 `.proto` 스키마 파일을 각 언어에 맞는 코드로 변환 가능.
   - **스키마 기반 메시지 구조**: `.proto` 파일에 메시지 구조와 필드 타입을 명확히 정의.
   - **빠른 직렬화/역직렬화**: 구조화된 데이터를 빠르고 안정적으로 처리.
-
----
 
 ## 1.3 gRPC (Google Remote Procedure Call)
 
@@ -39,8 +35,6 @@
   - **엄격한 인터페이스 정의**: Protobuf 스키마를 기반으로 클라이언트와 서버 간 인터페이스를 강력히 보장.
   - **성능 우수**: JSON/REST 대비 낮은 대역폭 사용, 빠른 응답 속도.
   - **양방향 스트리밍** 지원: 클라이언트–서버가 동시에 데이터를 주고받을 수 있음.
-
----
 
 ## 1.4 gRPC의 통신 방식 & 작동 원리
 
@@ -57,8 +51,6 @@
   Server → (메서드 실행, Protobuf 역직렬화) → 응답
   ```
 
----
-
 ## 1.5 gRPC의 통신 패턴
 
 1. **Unary RPC**
@@ -69,8 +61,6 @@
    클라이언트가 여러 요청을 스트리밍으로 전송하면, 서버가 단일 응답을 반환.
 4. **Bidirectional Streaming RPC**
    클라이언트와 서버가 모두 다중 메시지를 스트리밍으로 주고받을 수 있음.
-
----
 
 ## 1.6 gRPC와 REST 비교
 
@@ -98,6 +88,8 @@
 
 - 각 방식별 설계 사유 / 이유 / 왜 이렇게 될 수밖에 없는가
 
+---
+
 # 3. 구현 사례
 
 gRPC 서버
@@ -106,9 +98,11 @@ gRPC 서버
 - IDL 작성(.proto)
 - 빌드 및 서버 실행
 
+---
+
 # 4. 각 사례별 상세
 
-## 1. gRPC 클라이언트 중계 서버 O
+## 1. gRPC 중계 서버 기반 접근 방식
 
 ### 1-1. gRPC 서버 – Spring Boot – 브라우저
 
@@ -129,8 +123,6 @@ gRPC 서버
 
   - 중간 계층이 추가되므로 레이턴시와 자원 소모 증가.
   - 변환 및 매핑 로직 관리 부담.
-
----
 
 ### 1-2. gRPC 서버 – Next.js – 브라우저
 
@@ -154,7 +146,7 @@ gRPC 서버
 
 ---
 
-## 2. gRPC 클라이언트 중계 서버 X → Envoy Proxy 이용
+## 2. Envoy Proxy 기반 접근 방식
 
 ### Envoy Proxy 정의, 필요성, 설정
 
@@ -166,8 +158,6 @@ gRPC 서버
 
   - `grpc_web`, `cors`, `http_connection_manager` 필터 사용.
   - Envoy를 통해 gRPC 서버와 브라우저 간 통신을 중계.
-
----
 
 ### 2-1. gRPC 서버 – Envoy Proxy – React.js (JavaScript, protoc + gRPC-web)
 
@@ -186,8 +176,6 @@ gRPC 서버
   - Envoy 운영 부담 존재.
   - JavaScript 코드 기반이라 타입 안정성이 부족.
   - 브라우저 환경에서는 서버 스트리밍만 지원(양방향 불가).
-
----
 
 ### 2-2. gRPC 서버 – Envoy Proxy – React.js (TypeScript, buf + connect-web)
 
@@ -208,16 +196,14 @@ gRPC 서버
   - Envoy 운영 부담 존재.
   - 브라우저 환경에서는 서버 스트리밍만 지원(양방향 불가).
 
----
-
 **최종 요약 비교**
 
-| 방식         | 중계          | 브라우저 클라이언트 | 스트리밍      | 장점                              | 단점                       |
-| ------------ | ------------- | ------------------- | ------------- | --------------------------------- | -------------------------- |
-| 1-1 Spring   | Spring Boot   | fetch/WS/SSE        | 지원          | Java 표준, 엔터프라이즈 환경 적합 | 레이턴시 증가, 변환 부담   |
-| 1-2 Next.js  | Next.js(Node) | fetch/WS            | 지원          | Envoy 불필요, JS/TS 일관성        | 확장성 관리 필요           |
-| 2-1 React JS | Envoy         | grpc-web(JS)        | 서버 스트리밍 | 표준적, 안정성                    | Envoy 운영, 타입 부족      |
-| 2-2 React TS | Envoy         | connect-web(TS)     | 서버 스트리밍 | TS/DX 우수, React Query 연계      | 초기 세팅 복잡, Envoy 운영 |
+| 방식 | 중계          | 브라우저 클라이언트 | 스트리밍      | 장점                              | 단점                       |
+| ---- | ------------- | ------------------- | ------------- | --------------------------------- | -------------------------- |
+| 1-1  | Spring Boot   | fetch/WS/SSE        | 지원          | Java 표준, 엔터프라이즈 환경 적합 | 레이턴시 증가, 변환 부담   |
+| 1-2  | Next.js(Node) | fetch/WS            | 지원          | Envoy 불필요, JS/TS 일관성        | 확장성 관리 필요           |
+| 2-1  | Envoy         | grpc-web(JS)        | 서버 스트리밍 | 표준적, 안정성                    | Envoy 운영, 타입 부족      |
+| 2-2  | Envoy         | connect-web(TS)     | 서버 스트리밍 | TS/DX 우수, React Query 연계      | 초기 세팅 복잡, Envoy 운영 |
 
 ---
 
@@ -243,8 +229,6 @@ gRPC 서버
 
    - gRPC는 공식적으로 Java, Go, Python, C++, Node.js 등 다수의 언어를 지원하여, MSA 환경에서 다양한 기술 스택 간의 상호운용성을 높인다.
 
----
-
 ## 5.2 주의사항
 
 1. **디버깅 및 가시성 확보**
@@ -266,8 +250,6 @@ gRPC 서버
 
    - 서비스 인터페이스(proto 파일) 변경 시 클라이언트와 서버 동기화 필요.
    - 필드 삭제보다는 `reserved` 키워드 활용 등 호환성 전략이 중요하다.
-
----
 
 ## 5.3 한계
 
@@ -295,8 +277,6 @@ gRPC 서버
 - 서버 인증서(서버 인증), 클라이언트 인증서(양방향 인증, Mutual TLS)를 통해 서비스 간 보안 수준을 강화할 수 있다.
 - 서비스 메시(Service Mesh)나 로드밸런서를 사용할 경우, TLS 종료(termination) 지점에 대한 아키텍처 설계가 필요하다.
 
----
-
 ## 6.2 Envoy JSON Transcoder 적용
 
 - Envoy Proxy의 **gRPC-JSON Transcoder 필터**를 사용하면, 동일한 gRPC 서비스에 대해 RESTful JSON API를 자동으로 제공할 수 있다.
@@ -312,37 +292,9 @@ gRPC 서버
 
 ---
 
-## 6.3 다양한 언어 환경에서의 구현
-
-- gRPC는 멀티 언어를 공식 지원하므로, MSA 환경에서 서로 다른 언어를 사용하는 서비스 간 통신에 적합하다.
-- **Python**: `grpcio` 라이브러리와 `grpcio-tools`를 사용해 gRPC 서버/클라이언트를 구현 가능.
-- **Go**: gRPC에 대한 공식 지원이 성숙하며, 가볍고 빠른 서버 구축이 가능.
-- **Node.js, Java, C++** 등도 공식 라이브러리를 통해 안정적으로 지원.
-- 언어 간 통신은 `.proto` 파일 스키마 정의만 공유하면 Stub 코드 자동 생성으로 일관성 확보 가능.
-
----
-
-## 6.4 Go 환경에서의 grpc-gateway
-
-- **grpc-gateway**는 Go 기반 프로젝트에서 gRPC 서버와 함께 실행되는 리버스-프록시(reverse proxy) 컴포넌트이다.
-- 역할: gRPC 서비스 정의를 기반으로 **RESTful JSON ↔ gRPC 변환** 기능 제공.
-- 장점:
-
-  - 단일 Go 서버로 gRPC와 REST API를 동시에 노출 가능.
-  - 외부 API(REST)와 내부 API(gRPC)를 **하나의 코드베이스**로 관리 가능.
-
-- 한계:
-
-  - Go 언어 전용 도구이며, 다른 언어에서는 공식적으로 지원되지 않는다.
-  - 대규모 환경에서는 Envoy JSON Transcoder가 더 범용적이다.
-
----
-
 7. 참고문헌
    https://grpc.io/docs/platforms/web/basics/
    https://connectrpc.com/docs/introduction
    https://tech.ktcloud.com/253
    https://codewiz.info/blog/grpc-browser-ui-integration/
    https://dev.to/arichy/using-grpc-in-react-the-modern-way-from-grpc-web-to-connect-41lc
-
----
