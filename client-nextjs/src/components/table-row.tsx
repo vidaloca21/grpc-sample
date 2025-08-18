@@ -4,8 +4,7 @@ interface TableRowProps {
     data: TickerStreamData
 }
 
-export function TableRow(tableRowProps: TableRowProps) {
-    const { data } = tableRowProps
+export function TableRow({ data }: TableRowProps) {
     return (
         <tr>
             <td>{data.type}</td>
