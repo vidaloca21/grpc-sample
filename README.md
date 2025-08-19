@@ -462,7 +462,7 @@ java -jar ./build/libs/grpc-server-1.0-SNAPSHOT.jar
 
 - **구현 내용**
 
-##### 구조
+#### 구조
 
 ```
 (client-spring)
@@ -479,7 +479,7 @@ java -jar ./build/libs/grpc-server-1.0-SNAPSHOT.jar
      └─ static/index.html                  # 간이 테스트 페이지
 ```
 
-##### 의존성 & 빌드(Gradle)
+#### 의존성 & 빌드(Gradle)
 
 - gRPC: `grpc-netty-shaded`, `grpc-protobuf`, `grpc-stub`
 - 도구: `com.google.protobuf` 플러그인 (protoc, grpc 플러그인)
@@ -493,7 +493,7 @@ protobuf {
 }
 ```
 
-##### Proto & 코드 생성
+#### Proto & 코드 생성
 
 - 서비스: `TickerService { getTicker, streamTicker }`
 - 메시지:
@@ -509,9 +509,9 @@ service TickerService {
 }
 ```
 
-##### gRPC 클라이언트 계층(서버 사이드)
+#### gRPC 클라이언트 계층(서버 사이드)
 
-###### 단건(unary): `TickerClient.java`
+#### 단건(unary): `TickerClient.java`
 
 ```java
 channel = Grpc.newChannelBuilder("localhost:10010", InsecureChannelCredentials.create()).build();
@@ -521,7 +521,7 @@ var res = blocking.getTicker(TickerRequest.newBuilder().setMarket(code).build())
 // → TickerDto 매핑 후 반환
 ```
 
-###### 스트리밍: `StreamClient.java`
+#### 스트리밍: `StreamClient.java`
 
 ```java
 asyncStub = TickerServiceGrpc.newStub(Grpc.newChannelBuilder("localhost:10010", InsecureChannelCredentials.create()).build());
@@ -533,9 +533,9 @@ asyncStub.streamTicker(StreamRequest.newBuilder().setType("ticker").setCode(code
 });
 ```
 
-##### BFF(API) 계층 – 브라우저 중계
+#### BFF(API) 계층 – 브라우저 중계
 
-###### REST(JSON) → unary
+#### REST(JSON) → unary
 
 `/api/getTicker?code=KRW-BTC`
 
@@ -546,7 +546,7 @@ public ResponseEntity<TickerDto> getTicker(@RequestParam String code){
 }
 ```
 
-###### SSE → server-streaming
+#### SSE → server-streaming
 
 `/api/subscribe?code=KRW-BTC`
 
@@ -560,7 +560,7 @@ public SseEmitter subscribe(@RequestParam String code){
 }
 ```
 
-##### 실행 & 검증 → 정적 테스트 페이지
+#### 실행 & 검증 → 정적 테스트 페이지
 
 `static/index.html`
 
@@ -596,7 +596,7 @@ public SseEmitter subscribe(@RequestParam String code){
 
 - **구현 내용**
 
-##### 구조
+#### 구조
 
 ```
 (client-nextjs)
@@ -609,7 +609,7 @@ public SseEmitter subscribe(@RequestParam String code){
  └─ src/views/stream-view.tsx           # 스트림 수신 UI(WS)
 ```
 
-##### 의존성 & 설정
+#### 의존성 & 설정
 
 - 런타임: `next`, `@grpc/grpc-js`, `@grpc/proto-loader`, `ws`
 - (선택) 타입 생성: `ts-proto` 사용 시 `src/proto/ticker.ts` 생성
@@ -620,7 +620,7 @@ npm i @grpc/grpc-js @grpc/proto-loader ws
 npm i -D ts-proto
 ```
 
-##### Proto & **코드 생성**
+#### Proto & **코드 생성**
 
 - 서비스: `TickerService { getTicker, streamTicker }`
 - 메시지:
@@ -638,7 +638,7 @@ protoc \
   src/proto/ticker.proto
 ```
 
-##### gRPC 클라이언트 로더
+#### gRPC 클라이언트 로더
 
 `src/lib/grpc-client.ts`
 
@@ -658,7 +658,7 @@ export const grpcClient = new proto.TickerService(
 )
 ```
 
-##### API Route (unary → JSON)
+#### API Route (unary → JSON)
 
 `app/api/getTicker/route.ts`
 
@@ -678,7 +678,7 @@ export async function GET(req: Request) {
 }
 ```
 
-##### WebSocket 브릿지 (server-streaming → WS)
+#### WebSocket 브릿지 (server-streaming → WS)
 
 `ws-server.ts`
 
@@ -715,9 +715,9 @@ httpServer.listen(PORT, () => {
 })
 ```
 
-##### 브라우저 뷰
+#### 브라우저 뷰
 
-###### 단건 조회
+#### 단건 조회
 
 `src/views/ticker-view.tsx`
 
@@ -736,7 +736,7 @@ export default function TickerView() {
 }
 ```
 
-###### 스트림 수신
+#### 스트림 수신
 
 `src/views/stream-view.tsx`
 
@@ -768,7 +768,7 @@ export default function StreamView() {
 }
 ```
 
-##### 실행 & 검증
+#### 실행 & 검증
 
 ```bash
 # Next dev
@@ -917,7 +917,7 @@ docker compose up -d envoy-grpcweb
 
 # 2-1. gRPC 서버 – Envoy Proxy – React.js (JavaScript)
 
-##### 구조
+#### 구조
 
 ```
 (client-reactjs)
@@ -930,12 +930,12 @@ docker compose up -d envoy-grpcweb
  └─ src/App.jsx                          # 단건/스트림 UI
 ```
 
-##### 전제(네트워크 경로)
+#### 전제(네트워크 경로)
 
 - **Envoy**가 `http://localhost:8099`에서 **gRPC‑web ↔ gRPC** 변환
 - 백엔드 gRPC 서버는 Envoy 뒤에 존재(예: `localhost:10010`)
 
-##### 의존성
+#### 의존성
 
 ```bash
 npm i google-protobuf grpc-web
@@ -943,7 +943,7 @@ npm i -D protoc protoc-gen-grpc-web vite-plugin-commonjs
 # proto-lib을 로컬 패키지처럼 사용
 ```
 
-##### Proto & **코드 생성**(이미 산출물 포함)
+#### Proto & **코드 생성**(이미 산출물 포함)
 
 - `src/proto/ticker.proto`
 
@@ -963,7 +963,7 @@ npx protoc --proto_path=./src/proto ./src/proto/ticker.proto \
   - `ticker_pb.cjs`, `ticker_grpc_web_pb.cjs` → `index.cjs`에서 재export
   - `package.json`에서 `"name": "@proto/generated"` 로 지정되어 앱 코드에서 import 가능
 
-##### 브라우저 gRPC‑web 호출
+#### 브라우저 gRPC‑web 호출
 
 `src/api/api.js`
 
@@ -1001,7 +1001,7 @@ export function startTickerStream({ type, code, onData, onError, onEnd }) {
 }
 ```
 
-##### 실행 & 검증
+#### 실행 & 검증
 
 ```bash
 # 1) Envoy 프록시 실행
@@ -1033,7 +1033,7 @@ npm run dev
 
 - **구현 내용**
 
-##### 구조
+#### 구조
 
 ```
 (client-reactts)
@@ -1048,7 +1048,7 @@ npm run dev
  └─ src/App.tsx                             # UI (호출/스트림 연결)
 ```
 
-##### 의존성
+#### 의존성
 
 ```bash
 npm i @bufbuild/protobuf @connectrpc/connect @connectrpc/connect-web
@@ -1058,7 +1058,7 @@ npm i -D @bufbuild/buf @bufbuild/protoc-gen-es
 
 - **전제**: Envoy가 `http://localhost:8099` 에서 gRPC‑web ↔ gRPC 변환
 
-##### Proto & **코드 생성** (buf)
+#### Proto & **코드 생성** (buf)
 
 `buf.yaml`, `buf.gen.yaml` 기반으로 TS 코드를 생성
 
@@ -1092,7 +1092,7 @@ npx buf generate
   - **메시지/서비스**: `src/proto/gen/ticker_pb.ts`
   - **React Query용 엔드포인트**: `src/proto/gen/ticker-TickerService_connectquery.ts`
 
-##### 클라이언트 & Transport
+#### 클라이언트 & Transport
 
 `src/api/config/ticker-client.ts`
 
@@ -1105,9 +1105,9 @@ export const transport = createGrpcWebTransport({ baseUrl: 'http://localhost:809
 export const tickerClient = createClient(TickerService, transport)
 ```
 
-##### 사용 예시
+#### 사용 예시
 
-###### 1) 단건(unary) – React Query 훅
+#### 1) 단건(unary) – React Query 훅
 
 `src/api/useConnectTicker.ts`
 
@@ -1121,7 +1121,7 @@ export function useConnectTicker(market: string) {
 }
 ```
 
-###### 2) 서버 스트리밍 – async iterator
+#### 2) 서버 스트리밍 – async iterator
 
 `src/api/useConnectStream.ts`
 
@@ -1173,7 +1173,7 @@ export function useConnectStream(params: { type: string; code: string }) {
 }
 ```
 
-##### 실행 & 검증
+#### 실행 & 검증
 
 ```bash
 # 1) Envoy 프록시(8099) 실행: grpc_web, cors 필터 구성
