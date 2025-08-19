@@ -93,7 +93,7 @@
 #### -1. Application-level 브리지
 
 ```
-Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ gRPC 클라이언트 서버(HTTP/WebSocket or SSE) ─▶ 브라우저
+Upbit 서버(REST/WS) → gRPC 서버(gRPC) → gRPC 클라이언트 서버(HTTP/WebSocket or SSE) → 브라우저
 ```
 
 - **역할**
@@ -109,7 +109,7 @@ Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ gRPC 클라이언트 서�
 #### -2. Proxy-level 변환
 
 ```
-Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ 프록시 서버(gRPC-web/HTTP) ─▶ 브라우저
+Upbit 서버(REST/WS) → gRPC 서버(gRPC) → 프록시 서버(gRPC-web/HTTP) → 브라우저
 ```
 
 - **역할**
@@ -197,44 +197,6 @@ Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ 프록시 서버(gRPC-web/
 
 ---
 
-### 2.4 설계 공통 체크리스트
-
-- **스키마(Proto) 설계**
-
-  - Snapshot(unary) 메시지와 Realtime(stream) 메시지 **분리**
-  - **필드 호환성**: 번호 고정, `reserved` 사용, optional 명시
-  - 타임스탬프는 **UTC + nanos** 기준, 서버/클라 **시계 동기화**
-
-- **데이터 파이프라인**
-
-  - **정규화**: Upbit REST/WS → 내부 표준(Proto) 모델
-  - **디듀핑/순서 보장**: trade id/sequence 기반 정렬, 중복 제거
-  - **백프레셔**: 샘플링/배치/드롭 정책(예: 50ms 샘플링, 최대 큐 길이)
-
-- **확장성**
-
-  - 멀티 인스턴스 시 스트림 공유: **pub/sub(예: NATS, Redis Stream)** 또는 **중앙 브로커**
-  - 핫/콜드 구독 분리: 활성 뷰만 고주기, 백그라운드는 저주기
-
-- **신뢰성**
-
-  - **재연결/재구독**: 마지막 offset/seq 재요청
-  - **리트라이 정책**: 지수 백오프, 서킷 브레이커
-  - **레이트 리밋**: Upbit 정책 준수(키 단위, 엔드포인트 단위)
-
-- **보안**
-
-  - **TLS**(프록시/앱 어디서 종료할지 명확화)
-  - **토큰/키 보관**: 서버측 보관, 브라우저에 노출 금지
-  - **도메인별 CORS**: allow-origin/headers 정밀 설정
-
-- **관측성**
-
-  - **메트릭**: 레이턴시, 손실률, 큐 길이, 브로드캐스트 지연
-  - **로그/트레이싱**: correlation id, 종목·세션 단위 추적
-
----
-
 ### 2.5 선택 가이드(요약)
 
 | 항목               | -1. Application-level 브리지  | -2. Proxy-level 변환          |
@@ -248,11 +210,6 @@ Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ 프록시 서버(gRPC-web/
 
 ---
 
-좋아. 방금 확인한 `grpc-server` 소스 기준으로 **3장 전체**를 다시 썼어.
-(현재 레포에 있는 파일/패키지명을 충실히 반영하면서, 바로 쓸 수 있는 빌드/실행/검증 커맨드까지 포함. 마지막에 “오타 패키지명 정리” 권장안도 덧붙였어.)
-
----
-
 # 3. gRPC 서버
 
 - **구성 단계**
@@ -260,8 +217,6 @@ Upbit 서버(REST/WS) ─▶ gRPC 서버(gRPC) ─▶ 프록시 서버(gRPC-web/
   1. Gradle 환경 설정 → 2) IDL 작성(.proto) → 3) Stub 코드 생성 → 4) 서버 구현 및 실행
 
 - **역할**: Upbit REST/WebSocket 데이터를 내부 **gRPC 서비스(Ticker)** 로 표준화해 제공
-
----
 
 ## 3.1 프로젝트 구조
 
@@ -278,8 +233,6 @@ grpc-server/
 │     └─ UpbitWebsocketListener.java   // WS 실시간
 └─ build/generated/source/proto/main/...  // protoc/grpc-java 산출물
 ```
-
----
 
 ## 3.2 Gradle 설정
 
@@ -329,8 +282,6 @@ application {
 test { useJUnitPlatform() }
 ```
 
----
-
 ## 3.3 IDL 작성(.proto)
 
 ```proto
@@ -366,8 +317,6 @@ service TickerService {
   rpc streamTicker (StreamRequest) returns (stream StreamResponse);
 }
 ```
-
----
 
 ## 3.4 서비스 구현
 
@@ -429,8 +378,6 @@ public class TickerServiceImpl extends TickerServiceGrpc.TickerServiceImplBase {
 }
 ```
 
----
-
 ## 3.5 서버 부트스트랩
 
 ```java
@@ -465,8 +412,6 @@ public class GrpcServer {
 }
 ```
 
-### `com/example/Main.java`
-
 ```java
 public class Main {
   public static void main(String[] args) throws Exception {
@@ -477,8 +422,6 @@ public class Main {
   }
 }
 ```
-
----
 
 ## 3.6 빌드 & 실행
 
@@ -519,6 +462,118 @@ java -jar ./build/libs/grpc-server-1.0-SNAPSHOT.jar
 
 - **구현 내용**
 
+##### 구조
+
+```
+(client-spring)
+ ├─ src/main/proto/ticker.proto            # Proto(서비스·메시지)
+ ├─ src/main/java/com/example/client_spring/grpc/
+ │   ├─ TickerClient.java                  # gRPC unary 호출
+ │   └─ StreamClient.java                  # gRPC server-streaming 구독
+ ├─ src/main/java/com/example/client_spring/api/
+ │   ├─ controller/ApiController.java      # REST/SSE 엔드포인트
+ │   ├─ service/ticker/TickerServiceImpl.java
+ │   └─ service/stream/StreamServiceImpl.java
+ └─ src/main/resources/
+     ├─ application.properties             # HTTPS/HTTP2 설정
+     └─ static/index.html                  # 간이 테스트 페이지
+```
+
+##### 의존성 & 빌드(Gradle)
+
+- gRPC: `grpc-netty-shaded`, `grpc-protobuf`, `grpc-stub`
+- 도구: `com.google.protobuf` 플러그인 (protoc, grpc 플러그인)
+- 유틸: `okhttp`(Upbit용), `gson`(파싱)
+
+```gradle
+protobuf {
+  protoc { artifact = "com.google.protobuf:protoc:3.22.3" }
+  plugins { grpc { artifact = "io.grpc:protoc-gen-grpc-java:1.71.0" } }
+  generateProtoTasks { all()*.plugins { grpc {} } }
+}
+```
+
+##### Proto & 코드 생성
+
+- 서비스: `TickerService { getTicker, streamTicker }`
+- 메시지:
+
+  - `TickerRequest{ market }`
+  - `StreamRequest{ type, code }`
+  - `StreamResponse{ message }` _(WS 원문 JSON 문자열을 담음)_
+
+```proto
+service TickerService {
+  rpc getTicker (TickerRequest) returns (TickerResponse);
+  rpc streamTicker (StreamRequest) returns (stream StreamResponse);
+}
+```
+
+##### gRPC 클라이언트 계층(서버 사이드)
+
+###### 단건(unary): `TickerClient.java`
+
+```java
+channel = Grpc.newChannelBuilder("localhost:10010", InsecureChannelCredentials.create()).build();
+blocking = TickerServiceGrpc.newBlockingStub(channel);
+
+var res = blocking.getTicker(TickerRequest.newBuilder().setMarket(code).build());
+// → TickerDto 매핑 후 반환
+```
+
+###### 스트리밍: `StreamClient.java`
+
+```java
+asyncStub = TickerServiceGrpc.newStub(Grpc.newChannelBuilder("localhost:10010", InsecureChannelCredentials.create()).build());
+asyncStub.streamTicker(StreamRequest.newBuilder().setType("ticker").setCode(code).build(),
+  new StreamObserver<StreamResponse>() {
+    public void onNext(StreamResponse v){ onMessage.accept(v.getMessage()); }
+    public void onError(Throwable t){ /* 로그 */ }
+    public void onCompleted(){ /* 완료 처리 */ }
+});
+```
+
+##### BFF(API) 계층 – 브라우저 중계
+
+###### REST(JSON) → unary
+
+`/api/getTicker?code=KRW-BTC`
+
+```java
+@GetMapping("/api/getTicker")
+public ResponseEntity<TickerDto> getTicker(@RequestParam String code){
+  return ResponseEntity.ok(tickerService.getTicker(code));
+}
+```
+
+###### SSE → server-streaming
+
+`/api/subscribe?code=KRW-BTC`
+
+```java
+@GetMapping(value="/api/subscribe", produces=MediaType.TEXT_EVENT_STREAM_VALUE)
+public SseEmitter subscribe(@RequestParam String code){
+  var emitter = new SseEmitter(Long.MAX_VALUE);
+  streamService.addEmitter(emitter);
+  streamService.sendMessage(code); // 내부에서 gRPC stream 구독 → emitter로 push
+  return emitter;
+}
+```
+
+##### 실행 & 검증 → 정적 테스트 페이지
+
+`static/index.html`
+
+```html
+<button id="getTicker">api 호출</button>
+<button id="openStream">SSE 열기</button>
+<script>
+  $.get('/api/getTicker', { code: 'KRW-BTC' }, res => console.log(res))
+  const es = new EventSource('/api/subscribe?code=KRW-BTC')
+  es.onmessage = e => console.log(e.data)
+</script>
+```
+
 #### 1-2. gRPC 서버 – Next.js – 브라우저
 
 - **개요**
@@ -557,6 +612,80 @@ java -jar ./build/libs/grpc-server-1.0-SNAPSHOT.jar
   - Envoy를 통해 gRPC 서버와 브라우저 간 통신을 중계
 
 - **구현 내용**
+
+```yaml
+#envoy_d_grpcweb.yaml
+admin:
+  access_log_path: '/tmp/admin_access.log'
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 9199 }
+
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8099 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                codec_type: AUTO
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: local_service
+                      domains:
+                        - '*'
+                      cors:
+                        allow_origin_string_match:
+                          - exact: '*'
+                        allow_methods: GET, PUT, DELETE, POST, OPTIONS
+                        allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
+                        max_age: '1728000'
+                        expose_headers: custom-header-1,grpc-status,grpc-message
+                      routes:
+                        - match:
+                            prefix: '/'
+                          route:
+                            cluster: ticker_service
+                            max_grpc_timeout: 0s
+                http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.grpc_web
+                    typed_config:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: ticker_service
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      dns_lookup_family: V4_ONLY
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      load_assignment:
+        cluster_name: ticker_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: host.docker.internal, port_value: 10010 } }
+
+layered_runtime:
+  layers:
+    - name: static_layer
+      static_layer:
+        envoy:
+          logger:
+            level: debug
+```
 
 #### 2-1. gRPC 서버 – Envoy Proxy – React.js (JavaScript, protoc + gRPC-web)
 
